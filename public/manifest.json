@@ -1,0 +1,97 @@
+{
+  "name": "Admiral Bundesliga Sixpack",
+  "short_name": "Bundesliga Sixpack",
+  "description": "Offizieller Bundesliga Sixpack Tracker für die Saison 2025/26",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "de",
+  "categories": ["sports", "games", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/android/android-launchericon-72-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/android/android-launchericon-96-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/ios/128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/ios/144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/ios/152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/android/android-launchericon-192-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/android/android-launchericon-512-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Aktuelle Runde",
+      "short_name": "Runde",
+      "description": "Zur aktuellen Runde springen",
+      "url": "/?round=current",
+      "icons": [
+        {
+          "src": "/icons/android/android-launchericon-96-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Tipps eingeben",
+      "short_name": "Tipps",
+      "description": "Tipps für aktuelle Runde eingeben",
+      "url": "/?tab=matches",
+      "icons": [
+        {
+          "src": "/icons/android/android-launchericon-96-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshots/mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}
