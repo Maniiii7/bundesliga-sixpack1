@@ -246,14 +246,14 @@ const POINTS = {
   wrong: 0,      // Falsch
 };
 
-// Account-Farben
+// Account-Farben (intensiver für bessere Unterscheidbarkeit)
 const COLORS = [
-  "bg-blue-50 border-blue-200 text-blue-800",
-  "bg-green-50 border-green-200 text-green-800",
-  "bg-purple-50 border-purple-200 text-purple-800",
-  "bg-orange-50 border-orange-200 text-orange-800",
-  "bg-pink-50 border-pink-200 text-pink-800",
-  "bg-indigo-50 border-indigo-200 text-indigo-800",
+  "bg-blue-100 border-blue-400 text-blue-900",
+  "bg-green-100 border-green-400 text-green-900",
+  "bg-purple-100 border-purple-400 text-purple-900",
+  "bg-orange-100 border-orange-400 text-orange-900",
+  "bg-pink-100 border-pink-400 text-pink-900",
+  "bg-indigo-100 border-indigo-400 text-indigo-900",
 ];
 
 
@@ -401,16 +401,16 @@ clearTeamFormCache: () => {
   
   // Berechnet Punkte für Tipp
   calculatePoints: (tip, actual) => {
-    if (!tip || !actual) return 0;
-    const { home: th, away: ta } = tip;
-    const { home: ah, away: aa } = actual;
-    if (th == null || ta == null || ah == null || aa == null) return 0;
+  if (!tip || !actual) return 0;
+  const { home: th, away: ta } = tip;
+  const { home: ah, away: aa } = actual;
+  if (th == null || ta == null || ah == null || aa == null) return 0;
 
     if (th === ah && ta === aa) return POINTS.exact;
 
     const tipOut = utils.getOutcome(th, ta);
     const actOut = utils.getOutcome(ah, aa);
-    if (tipOut === actOut) {
+  if (tipOut === actOut) {
       if (th - ta === ah - aa) return POINTS.diff;
       return POINTS.tendency;
     }
@@ -419,21 +419,21 @@ clearTeamFormCache: () => {
   
   // Legacy usePersistedState (wird durch useRobustPersistedState ersetzt)
   usePersistedState: (key, initial) => {
-    const [state, setState] = useState(() => {
-      try {
-        const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) : initial;
+  const [state, setState] = useState(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : initial;
       } catch (error) {
         console.error(`Fehler beim Laden von ${key}:`, error);
-        return initial;
-      }
-    });
+      return initial;
+    }
+  });
     
     // Debounced localStorage save
-    useEffect(() => {
+  useEffect(() => {
       const timeoutId = setTimeout(() => {
         try {
-          localStorage.setItem(key, JSON.stringify(state));
+    localStorage.setItem(key, JSON.stringify(state));
         } catch (error) {
           console.error(`Fehler beim Speichern von ${key}:`, error);
           // Versuche Speicherplatz freizugeben
@@ -447,10 +447,10 @@ clearTeamFormCache: () => {
       }, 500); // 500ms Debounce
       
       return () => clearTimeout(timeoutId);
-    }, [key, state]);
+  }, [key, state]);
     
-    return [state, setState];
-  }
+  return [state, setState];
+}
 };
 
 // Hauptkomponente
@@ -528,11 +528,22 @@ function App() {
   const addAccount = useCallback(() => {
     if (!newAccountName.trim()) return;
     
-    setAccounts(prev => [...prev, {
-      id: utils.uid(),
-      name: newAccountName.trim(),
-      color: prev.length % COLORS.length
-    }]);
+    setAccounts(prev => {
+      const usedColors = new Set(prev.map(a => a.color));
+      let colorIndex = 0;
+      while (usedColors.has(colorIndex) && colorIndex < COLORS.length) colorIndex++;
+      if (colorIndex >= COLORS.length) {
+        colorIndex = prev.length % COLORS.length;
+      }
+      return [
+        ...prev,
+        {
+          id: utils.uid(),
+          name: newAccountName.trim(),
+          color: colorIndex
+        }
+      ];
+    });
     setNewAccountName("");
   }, [newAccountName]);
 
@@ -580,17 +591,20 @@ function App() {
 
   // Verbesserte setResult-Funktion mit Validierung (ohne doppelte localStorage-Aufrufe)
   const setResult = useCallback((matchId, home, away) => {
-    const validatedHome = validateTipInput(home, 'home');
-    const validatedAway = validateTipInput(away, 'away');
-    
+    const clampResult = (value) => {
+      const n = parseInt(value);
+      if (Number.isNaN(n)) return null;
+      return Math.max(0, Math.min(99, n));
+    };
+
     setResults(prev => ({
       ...prev,
-      [matchId]: { 
-        home: validatedHome, 
-        away: validatedAway 
+      [matchId]: {
+        home: clampResult(home),
+        away: clampResult(away)
       }
     }));
-    
+
     // Cache leeren, da sich Daten geändert haben (debounced für bessere Performance)
     setTimeout(() => utils.clearTeamFormCache(), 500);
   }, []);
@@ -1222,12 +1236,12 @@ function App() {
         timestamp: new Date().toISOString()
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+    a.href = url;
       a.download = `bundesliga-sixpack-backup-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+    a.click();
+    URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Fehler beim Exportieren:', error);
       setError('Fehler beim Exportieren der Daten');
@@ -1354,8 +1368,8 @@ function App() {
     try {
       const roundData = currentMatches.map((match, index) => {
       const result = results[match.id];
-      const homeForm = utils.getTeamForm(match.home, results);
-      const awayForm = utils.getTeamForm(match.away, results);
+      const homeForm = utils.getTeamForm(match.home, results, currentRound);
+      const awayForm = utils.getTeamForm(match.away, results, currentRound);
       
       let matchText = `\nSPIEL ${index + 1}: ${match.home} vs ${match.away}\n`;
       matchText += `Form: ${homeForm.form} | ${awayForm.form}\n`;
@@ -1440,11 +1454,11 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
     const homeForm = utils.getTeamForm(match.home, results, currentRound);
     const awayForm = utils.getTeamForm(match.away, results, currentRound);
     const isManualMatch = match.id && typeof match.id === 'string' && match.id.startsWith('manual-');
-    
-    return (
+
+  return (
       <div 
         key={match.id} 
-        className="bg-gray-50 rounded-lg p-6 border border-gray-200 transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+        className="bg-gray-50 rounded-lg p-6 border border-gray-200"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -1463,7 +1477,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                   🗑️
                 </button>
               )}
-            </div>
+          </div>
             <div className="text-sm text-gray-500 space-y-1">
               <div>Spiel-ID: {match.id}</div>
               <div className="flex flex-col gap-1">
@@ -1497,7 +1511,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
             </div>
           </div>
           {hasResult && (
-            <div className="text-right animate-pulse">
+            <div className="text-right">
               <div className="text-sm text-gray-600 mb-1">Endergebnis</div>
               <div className="text-2xl font-bold text-green-600 bg-green-100 px-3 py-1 rounded-lg">
                 {result.home} : {result.away}
@@ -1532,7 +1546,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
             >
               🎯 Tipp generieren
             </button>
-          </div>
+              </div>
           <div className="text-xs text-purple-600">
             Klicken Sie auf "Tipp generieren" für eine KI-basierte Vorhersage basierend auf Mannschaftsform, Heimvorteil und Trends.
           </div>
@@ -1541,40 +1555,34 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
         {/* Ergebnis-Eingabe */}
         <div className="bg-white rounded-lg p-4 mb-4 border border-gray-200">
           <div className="text-sm font-semibold text-gray-700 mb-3">🏆 Endergebnis eintragen:</div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <div>
               <label className="block text-xs text-gray-600 mb-1">Heim ({match.home})</label>
                              <input
                  type="number"
-                 min="0"
-                 max="99"
                  placeholder="0"
-                 value={result?.home || ''}
+                 value={result?.home ?? ''}
                  onChange={(e) => {
-                   const value = parseInt(e.target.value) || 0;
-                   setResult(match.id, Math.max(0, Math.min(99, value)), result?.away);
+                   setResult(match.id, e.target.value, result?.away);
                  }}
                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-bold"
                />
-            </div>
+              </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">Auswärts ({match.away})</label>
                              <input
                  type="number"
-                 min="0"
-                 max="99"
                  placeholder="0"
-                 value={result?.away || ''}
+                 value={result?.away ?? ''}
                  onChange={(e) => {
-                   const value = parseInt(e.target.value) || 0;
-                   setResult(match.id, result?.home, Math.max(0, Math.min(99, value)));
+                   setResult(match.id, result?.home, e.target.value);
                  }}
                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-bold"
                />
             </div>
           </div>
         </div>
-        
+
         {/* Tipps der Accounts */}
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="text-sm font-semibold text-gray-700 mb-3">🎯 Tipps der Accounts:</div>
@@ -1605,8 +1613,8 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                   {quickTip.label}
                 </button>
               ))}
-            </div>
-          </div>
+              </div>
+        </div>
           <div className="space-y-3">
             {accounts.map(account => {
               const tip = tips[account.id]?.[match.id];
@@ -1614,74 +1622,74 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
               
               return (
                 <div key={account.id} className={`p-3 rounded-lg border-2 ${COLORS[account.color]}`}>
-                  <div className="flex justify-between items-center">
-                                      <div className="flex items-center gap-3">
-                    <span className="font-semibold text-sm">{account.name}</span>
-                    <button
-                      onClick={() => showTipHistory(account.id)}
-                      className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-                      title="Tipp-Historie anzeigen"
-                    >
-                      📊
-                    </button>
-                      <div className="flex gap-2">
+                  <div className="flex flex-wrap justify-between items-center gap-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="font-semibold text-sm">{account.name}</span>
+                      <button
+                        onClick={() => showTipHistory(account.id)}
+                        className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                        title="Tipp-Historie anzeigen"
+                      >
+                        📊
+                      </button>
+                      <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
                         <div>
                           <label className="block text-xs text-gray-600 mb-1">H</label>
-                                                                             <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          placeholder="0"
-                          value={tip?.home || ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setTip(account.id, match.id, value, tip?.away);
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value;
-                            const validatedValue = validateTipInput(value, 'home');
-                            if (validatedValue !== parseInt(value)) {
-                              setTip(account.id, match.id, validatedValue, tip?.away);
-                            }
-                          }}
-                          className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-center text-sm"
-                        />
+                          <input
+                            type="number"
+                            min="0"
+                            max="10"
+                            placeholder="0"
+                            value={tip?.home ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setTip(account.id, match.id, value, tip?.away);
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value;
+                              const validatedValue = validateTipInput(value, 'home');
+                              if (validatedValue !== parseInt(value)) {
+                                setTip(account.id, match.id, validatedValue, tip?.away);
+                              }
+                            }}
+                            className="w-full sm:w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-center text-sm"
+                          />
                         </div>
                         <div>
                           <label className="block text-xs text-gray-600 mb-1">A</label>
-                                                                             <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          placeholder="0"
-                          value={tip?.away || ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setTip(account.id, match.id, tip?.home, value);
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value;
-                            const validatedValue = validateTipInput(value, 'away');
-                            if (validatedValue !== parseInt(value)) {
-                              setTip(account.id, match.id, tip?.home, validatedValue);
-                            }
-                          }}
-                          className="w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-center text-sm"
-                        />
+                          <input
+                            type="number"
+                            min="0"
+                            max="10"
+                            placeholder="0"
+                            value={tip?.away ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setTip(account.id, match.id, tip?.home, value);
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value;
+                              const validatedValue = validateTipInput(value, 'away');
+                              if (validatedValue !== parseInt(value)) {
+                                setTip(account.id, match.id, tip?.home, validatedValue);
+                              }
+                            }}
+                            className="w-full sm:w-16 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-center text-sm"
+                          />
                         </div>
                       </div>
                     </div>
-                                         {hasResult && (
-                       <div className="text-right">
-                         <div className="text-xs text-gray-600 mb-1">Tipp</div>
-                         <div className={`text-sm font-bold px-3 py-1 rounded-lg ${
-                           points === 3 ? 'bg-green-100 text-green-800 border border-green-300' :
-                           'bg-red-100 text-red-800 border border-red-300'
-                         }`}>
-                           {points === 3 ? '✅ Richtig' : '❌ Falsch'}
-                         </div>
-                       </div>
-                     )}
+                    {hasResult && (
+                      <div className="w-full sm:w-auto sm:text-right">
+                        <div className="text-xs text-gray-600 mb-1">Tipp</div>
+                        <div className={`inline-block max-w-full break-words text-xs sm:text-sm font-bold px-3 py-1 rounded-lg ${
+                          points === 3 ? 'bg-green-100 text-green-800 border border-green-300' :
+                          'bg-red-100 text-red-800 border border-red-300'
+                        }`}>
+                          {points === 3 ? '✅ Richtig' : '❌ Falsch'}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -1693,7 +1701,9 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
   }, [accounts, tips, results, setTip, setResult]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 sm:p-6 pb-20 lg:pb-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 sm:p-6 pb-20 lg:pb-6 overflow-x-hidden">
+      {/* Globale Deaktivierung aller Animationen/Transitions */}
+      <style>{`*{animation:none !important;transition:none !important;}`}</style>
       {/* Auth Check - Zeige Login/Register wenn nicht angemeldet */}
       {!isAuthenticated ? (
         <Auth onLogin={handleLogin} onRegister={handleRegister} />
@@ -1705,28 +1715,28 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">⚠️</span>
-                  <div>
+            <div>
                     <h3 className="font-semibold text-red-800">Fehler aufgetreten</h3>
                     <p className="text-red-600 text-sm">{error}</p>
-                  </div>
-                </div>
+            </div>
+            </div>
                 <button
                   onClick={() => setError(null)}
                   className="text-red-500 hover:text-red-700 text-xl"
                 >
                   ×
                 </button>
-              </div>
+          </div>
             </div>
           )}
 
           {/* Loading Overlay */}
-          {isLoading && (
+          {typeof isLoading !== 'undefined' && isLoading && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-8 text-center">
-                <div className="animate-spin text-4xl mb-4">⏳</div>
+                <div className="text-4xl mb-4">⏳</div>
                 <p className="text-gray-600">Lade...</p>
-              </div>
+            </div>
             </div>
           )}
           {/* Header */}
@@ -1746,12 +1756,12 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                 )}
               </div>
               <div className="mt-6 lg:mt-0 lg:ml-8 flex items-center gap-4">
-                <div className="text-5xl lg:text-6xl font-black text-white bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 rounded-2xl shadow-lg transform hover:scale-105 transition-transform">
+                <div className="text-5xl lg:text-6xl font-black text-white bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 rounded-2xl shadow-lg">
                   R{currentRound}
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-lg hover:shadow-xl text-sm transform hover:scale-105"
+                  className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg text-sm"
                 >
                   🚪 Abmelden
                 </button>
@@ -1810,16 +1820,16 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">
                             {index + 1}
-                          </div>
-                          <div>
+            </div>
+            <div>
                             <div className="font-semibold text-gray-800">{account.name}</div>
                             <div className="text-sm text-gray-600">{account.correctPredictions} von 6 richtig</div>
-                          </div>
-                        </div>
+            </div>
+          </div>
                         <div className="text-right">
                           <div className="text-lg font-bold text-blue-600">{account.correctPredictions}</div>
                           <div className="text-xs text-gray-500">Richtig</div>
-                        </div>
+        </div>
                       </div>
                     ))}
                   </div>
@@ -1852,14 +1862,15 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                       const roundResults = roundMatches.filter(match => 
                         results[match.id] && results[match.id].home !== null && results[match.id].away !== null
                       ).length;
-                      const roundTips = accounts.reduce((total, account) => {
-                        const accountTips = tips[account.id] || {};
-                        return total + roundMatches.filter(match => 
-                          accountTips[match.id] && accountTips[match.id].home !== null && accountTips[match.id].away !== null
-                        ).length;
-                      }, 0);
+                      const matchesWithAllTips = roundMatches.filter(match => 
+                        accounts.every(account => {
+                          const accountTips = tips[account.id] || {};
+                          const t = accountTips[match.id];
+                          return t && t.home !== null && t.away !== null;
+                        })
+                      ).length;
                       
-                      return (
+  return (
                         <div 
                           key={round} 
                           className={`flex justify-between items-center p-3 rounded-lg cursor-pointer transition-all hover:scale-105 ${
@@ -1872,7 +1883,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                           <div className="flex items-center gap-3">
                             <span className="font-bold text-sm">Runde {round}</span>
                             <div className="text-xs opacity-75">
-                              {roundTips}/{roundMatches.length * accounts.length} Tipps
+                              {matchesWithAllTips}/{roundMatches.length} Tipps
                             </div>
                           </div>
                           <div className="text-xs opacity-75">
@@ -1886,12 +1897,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
               </div>
             </div>
 
-            {/* Accounts Panel */}
-            <div className={`lg:col-span-1 space-y-6 sm:space-y-8 ${activeTab === 'accounts' ? 'block' : 'hidden lg:block'}`}>
-
-
-
-            </div>
+            {/* Accounts Panel entfernt (leere Spalte beseitigt) */}
 
             {/* Hauptbereich - Spiele & Tipps */}
             <div className={`lg:col-span-3 ${activeTab === 'matches' ? 'block' : 'hidden lg:block'}`}>
@@ -1908,13 +1914,13 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={showTeamResults}
-                      className="px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all font-medium shadow-lg hover:shadow-xl text-sm transform hover:scale-105"
+                      className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium shadow-lg text-sm"
                     >
                       🏆 Mannschafts-Ergebnisse
                     </button>
                     <button
                       onClick={exportRoundAsTxt}
-                      className="px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl text-sm transform hover:scale-105"
+                      className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium shadow-lg text-sm"
                     >
                       📄 Export TXT
                     </button>
@@ -1925,11 +1931,11 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                 
                 {/* Runden-Navigation */}
                 <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 mb-6 border border-gray-200/50">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-4">
                     <button
                       onClick={() => setCurrentRound(Math.max(1, currentRound - 1))}
                       disabled={currentRound === 1}
-                      className="px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                      className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
                     >
                       ← Vorherige
                     </button>
@@ -1943,17 +1949,17 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                     </div>
                     <button
                       onClick={() => setCurrentRound(currentRound + 1)}
-                      className="px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                      className="w-full sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium shadow-lg"
                     >
                       Nächste →
                     </button>
                   </div>
                   
                   {/* Schnell-Navigation */}
-                  <div className="flex flex-wrap justify-center gap-2">
+                  <div className="flex flex-wrap justify-center gap-2 w-full">
                     <button
                       onClick={() => setCurrentRound(1)}
-                      className={`px-4 py-2 text-sm rounded-xl font-medium transition-all transform hover:scale-105 ${
+                      className={`px-4 py-2 text-xs sm:text-sm rounded-xl font-medium ${
                         currentRound >= 1 && currentRound <= 6 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' : 'bg-white/70 text-gray-700 hover:bg-white shadow-md hover:shadow-lg'
                       }`}
                     >
@@ -1961,7 +1967,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                     </button>
                     <button
                       onClick={() => setCurrentRound(7)}
-                      className={`px-4 py-2 text-sm rounded-xl font-medium transition-all transform hover:scale-105 ${
+                      className={`px-4 py-2 text-xs sm:text-sm rounded-xl font-medium ${
                         currentRound >= 7 && currentRound <= 12 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' : 'bg-white/70 text-gray-700 hover:bg-white shadow-md hover:shadow-lg'
                       }`}
                     >
@@ -1969,7 +1975,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                     </button>
                     <button
                       onClick={() => setCurrentRound(13)}
-                      className={`px-4 py-2 text-sm rounded-xl font-medium transition-all transform hover:scale-105 ${
+                      className={`px-4 py-2 text-xs sm:text-sm rounded-xl font-medium ${
                         currentRound >= 13 && currentRound <= 18 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' : 'bg-white/70 text-gray-700 hover:bg-white shadow-md hover:shadow-lg'
                       }`}
                     >
@@ -1977,7 +1983,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                     </button>
                     <button
                       onClick={() => setCurrentRound(19)}
-                      className={`px-4 py-2 text-sm rounded-xl font-medium transition-all transform hover:scale-105 ${
+                      className={`px-4 py-2 text-xs sm:text-sm rounded-xl font-medium ${
                         currentRound >= 19 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' : 'bg-white/70 text-gray-700 hover:bg-white shadow-md hover:shadow-lg'
                       }`}
                     >
@@ -2037,7 +2043,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                         </div>
                       </div>
                       {currentMatches.length === 0 && (
-                        <div className="text-center py-4 text-orange-600">
+                        <div className="text-center py-4 text-orange-600 break-words">
                           <div className="text-2xl mb-2">📝</div>
                           <p>Noch keine Spiele für Runde {currentRound} eingetragen</p>
                           <p className="text-xs mt-1">Klicken Sie auf "Spiel hinzufügen" um zu beginnen</p>
@@ -2099,19 +2105,19 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                                  utils.calculatePoints(tip, result) === 3;
                         }).length;
                         
-                        return (
+  return (
                           <div key={account.id} className={`p-3 rounded-lg border-2 ${COLORS[account.color]}`}>
                             <div className="font-semibold text-sm mb-1">{account.name}</div>
                             <div className="text-xs text-gray-600 space-y-1">
                               <div>Tipps: {totalTips}</div>
                               <div>Richtig: {correctTips}</div>
                               <div>Quote: {totalTips > 0 ? `${Math.round((correctTips/totalTips)*100)}%` : '0%'}</div>
-                            </div>
+        </div>
                           </div>
                         );
                       })}
-                    </div>
-                  </div>
+        </div>
+      </div>
 
 
 
@@ -2122,9 +2128,9 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                       <div className="text-center p-4 bg-white/50 rounded-lg">
                         <div className="text-2xl font-bold text-purple-600">
                           {currentRoundPoints.reduce((sum, acc) => sum + acc.correctPredictions, 0)}
-                        </div>
+                </div>
                         <div className="text-sm text-gray-600">Richtige Tipps gesamt</div>
-                      </div>
+                </div>
                       <div className="space-y-2">
                         {currentRoundPoints.map((account, index) => (
                           <div key={account.id} className="flex justify-between items-center p-2 bg-white/50 rounded-lg">
@@ -2132,8 +2138,8 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                             <span className="text-sm font-bold text-purple-600">
                               {account.correctPredictions}/6
                             </span>
-                          </div>
-                        ))}
+              </div>
+            ))}
                       </div>
                     </div>
                   </div>
@@ -2185,7 +2191,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                       {/* Neue Funktionen für unabhängige Nutzung */}
                       <div className="border-t border-orange-200 pt-3 mt-3">
                         <h4 className="text-sm font-semibold text-orange-800 mb-2">📁 Unabhängige Nutzung</h4>
-                        <div className="space-y-2">
+                <div className="space-y-2">
                           <button
                             onClick={exportCurrentRound}
                             className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-medium text-sm"
@@ -2367,7 +2373,7 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                             <span className="text-sm font-medium">
                               {teamForm.form}
                             </span>
-                          </div>
+                      </div>
                           <div className="text-sm text-gray-500 font-medium">
                             {teamForm.recentResults?.length || 0} Spiele • {teamForm.avgPoints?.toFixed(1) || '0.0'}P/Spiel
                           </div>
@@ -2376,16 +2382,16 @@ Exportiert von Admiral Bundesliga Sixpack Tracker`;
                     );
                   });
                 })()}
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
+      </div>
+    </div>
       )}
 
 
 
       {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 z-40 lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 z-40 lg:hidden overflow-x-hidden">
         <div className="flex justify-around py-3">
           <button
             onClick={() => setActiveTab('overview')}

@@ -8,9 +8,12 @@ export const usePWA = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isStandalone, setIsStandalone] = useState(false);
 
-  // Install-Prompt abfangen
+  const isDev = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)/.test(window.location.hostname);
+
+  // Install-Prompt abfangen (nur Produktion)
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
+      if (isDev) return; // in Dev nichts abfangen, HMR stabil halten
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
@@ -43,6 +46,13 @@ export const usePWA = () => {
     checkStandalone();
     window.matchMedia('(display-mode: standalone)').addEventListener('change', checkStandalone);
 
+    // In Dev sicherstellen, dass keine SW-Registrierungen aktiv sind
+    if (isDev && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister().catch(() => {}));
+      }).catch(() => {});
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
@@ -50,7 +60,7 @@ export const usePWA = () => {
       window.removeEventListener('offline', handleOffline);
       window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkStandalone);
     };
-  }, []);
+  }, [isDev]);
 
   // Install-Funktion
   const installApp = useCallback(async () => {
@@ -79,8 +89,9 @@ export const usePWA = () => {
     }
   }, [deferredPrompt]);
 
-  // Service Worker Update Check
+  // Service Worker Update Check (in Dev no-op)
   const checkForUpdates = useCallback(async () => {
+    if (isDev) return false;
     if ('serviceWorker' in navigator) {
       try {
         const registration = await navigator.serviceWorker.getRegistration();
@@ -93,7 +104,7 @@ export const usePWA = () => {
       }
     }
     return false;
-  }, []);
+  }, [isDev]);
 
   // Push Notifications
   const requestNotificationPermission = useCallback(async () => {
